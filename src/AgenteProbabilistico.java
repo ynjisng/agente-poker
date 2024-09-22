@@ -1,7 +1,5 @@
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class AgenteProbabilistico implements Agente {
     private final double stack;  // Stack do jogador (fichas restantes)
@@ -11,6 +9,8 @@ public class AgenteProbabilistico implements Agente {
 
     // Mapa de odds para diferentes mãos de póquer
     private final Map<String, Double> oddsMap = new HashMap<>();
+
+    private MaoDePoker maoDePoker = new MaoDePoker();
 
     // Construtor inicializando com stack inicial e odds map
     public AgenteProbabilistico() {
@@ -59,30 +59,32 @@ public class AgenteProbabilistico implements Agente {
     @Override
     public int getPrimeiraAposta(Carta[] jogo) {
         // Define as odds da mão antes de calcular a aposta
-        this.oddsMao = definirOddsMao(jogo);
+    this.oddsMao = definirOddsMao(jogo);
 
-        // A primeira aposta é determinada pela análise da mão
-        this.poteAtual = 350;  // Supondo o valor do pote na primeira rodada
-        this.valorParaPagar = 10;  // Mínimo da primeira aposta é 10
+    // A primeira aposta é determinada pela análise da mão
+    this.poteAtual = 100;  // Supondo o valor do pote na primeira rodada
+    this.valorParaPagar = 10;  // Mínimo da primeira aposta é 10
 
-        // Calcula as pot odds
-        double potOdds = calcularPotOdds(valorParaPagar, poteAtual);
-        System.out.println("Pot Odds: " + potOdds);
+    // Calcula as pot odds
+    double potOdds = calcularPotOdds(valorParaPagar, poteAtual);
+    System.out.println("Pot Odds: " + potOdds);
 
-        // Decide se deve apostar com base nas odds da mão e nas pot odds
-        if (deveApostar(oddsMao, potOdds)) {
-            // Aposta um valor baseado em 50% do pote (ajuste conforme necessário)
-            double fatorAposta = determinarFatorAposta(oddsMao);
-
-            // Calcula o valor da aposta com base no fator determinado
-            double valorAposta = calcularValorAposta(poteAtual, fatorAposta);
-            System.out.println("Você deve apostar: " + valorAposta);
-            this.valorParaPagar = Math.min(valorAposta, stack);
-            return (int) this.valorParaPagar;  // Não aposta mais do que o stack
-        } else {
-            System.out.println("Não vale a pena apostar. Aposta mínima de 10.");
-            return 10;  // Aposta mínima
-        }
+    // Decide se deve apostar com base nas odds da mão e nas pot odds
+    if (deveApostar(oddsMao, potOdds)) {
+        // Determina o fator da aposta com base nas odds da mão
+        double fatorAposta = determinarFatorAposta(oddsMao);
+        
+        // Calcula o valor da aposta com base no fator determinado
+        double valorAposta = calcularValorAposta(poteAtual, fatorAposta);
+        System.out.println("Você deve apostar: " + valorAposta);
+        
+        // Aposta o valor calculado, mas garante que não aposta mais do que o stack
+        return (int) Math.min(valorAposta, 400.0);
+    } else {
+        // Se as odds da mão e as pot odds não são favoráveis, aposta o mínimo
+        System.out.println("Não vale a pena apostar. Aposta mínima de 10.");
+        return 10;  // Aposta mínima
+    }
     }
 
     @Override
@@ -113,222 +115,6 @@ public class AgenteProbabilistico implements Agente {
         return false;
         //return apostaMaisAlta < this.valorParaPagar;
         // Se não decidir continuar a apostar, retornar false
-    }
-
-
-    // Função para verificar se a mão é um Royal Flush
-    private boolean isRoyalFlush(Carta[] jogo) {
-        return isFlush(jogo) && containsValores(jogo, new int[]{10, 11, 12, 13, 14});
-    }
-
-    // Função para verificar se a mão é um Straight Flush
-    private boolean isStraightFlush(Carta[] jogo) {
-        return isFlush(jogo) && isSequencia(jogo);
-    }
-
-    // Função para verificar se a mão é uma Quadra
-    private boolean isQuadra(Carta[] jogo) {
-        return hasSameValue(jogo, 4);
-    }
-
-    // Função para verificar se a mão é um Full House (Trinca + Par)
-    private boolean isFullHouse(Carta[] jogo) {
-        return hasSameValue(jogo, 3) && hasSameValue(jogo, 2);
-    }
-
-    // Função para verificar se a mão é um Flush (todas as cartas com o mesmo naipe)
-    private boolean isFlush(Carta[] jogo) {
-        return Arrays.stream(jogo).map(carta -> carta.naipe).distinct().count() == 1;
-    }
-
-    // Função para verificar se a mão é uma Sequência (Straight)
-    private boolean isSequencia(Carta[] jogo) {
-        int[] valores = Arrays.stream(jogo).mapToInt(carta -> carta.valor).sorted().toArray();
-        for (int i = 0; i < valores.length - 1; i++) {
-            if (valores[i] + 1 != valores[i + 1]) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    // Função para verificar se a mão é uma Trinca (Três cartas com o mesmo valor)
-    private boolean isTrinca(Carta[] jogo) {
-        return hasSameValue(jogo, 3);
-    }
-
-    // Função para verificar se a mão tem Dois Pares
-    private boolean isDoisPares(Carta[] jogo) {
-        return countPairs(jogo) == 2;
-    }
-
-    // Função para verificar se a mão tem Um Par
-    private boolean isUmPar(Carta[] jogo) {
-        return countPairs(jogo) == 1;
-    }
-
-    // Função para verificar se a mão é AKs (Ás e Rei do mesmo naipe)
-    private boolean isAKSuited(Carta[] jogo) {
-        return containsValores(jogo, new int[]{14, 13}) && isFlush(jogo);
-    }
-
-    // Função para verificar se a mão é AA (Par de Áses)
-    private boolean isAA(Carta[] jogo) {
-        return containsValores(jogo, new int[]{14}) && hasSameValue(jogo, 2);
-    }
-
-    // Funções para as mãos como "AKs, KQs, QJs, etc."
-    private boolean isAKsKQsQJsJTs(Carta[] jogo) {
-        return containsValores(jogo, new int[]{14, 13, 12, 11, 10}) && isFlush(jogo);
-    }
-
-    private boolean isAK(Carta[] jogo) {
-        return containsValores(jogo, new int[]{14, 13});
-    }
-
-    private boolean isAAKKQQ(Carta[] jogo) {
-        return containsValores(jogo, new int[]{14, 13, 12}) && hasSameValue(jogo, 2);
-    }
-
-    private boolean isAAKKQQJJ(Carta[] jogo) {
-        return containsValores(jogo, new int[]{14, 13, 12, 11}) && hasSameValue(jogo, 2);
-    }
-
-    // Auxiliares para checar outras mãos conectadas ou específicas
-    private boolean isCartasMesmoNaipeValeteOuMelhor(Carta[] jogo) {
-        return containsValores(jogo, new int[]{11, 12, 13, 14}) && isFlush(jogo);
-    }
-
-    private boolean isCartasMesmoNaipe10OuMelhor(Carta[] jogo) {
-        return containsValores(jogo, new int[]{10, 11, 12, 13, 14}) && isFlush(jogo);
-    }
-
-    private boolean isConectoresMesmoNaipe(Carta[] jogo) {
-        return isFlush(jogo) && isSequencia(jogo);
-    }
-
-    private boolean isQualquer2CartasDamaOuMelhor(Carta[] jogo) {
-        return containsValores(jogo, new int[]{12, 13, 14});
-    }
-
-    private boolean isQualquer2CartasValeteOuMelhor(Carta[] jogo) {
-        return containsValores(jogo, new int[]{11, 12, 13, 14});
-    }
-
-    private boolean isQualquer2Cartas10OuMelhor(Carta[] jogo) {
-        return containsValores(jogo, new int[]{10, 11, 12, 13, 14});
-    }
-
-    private boolean isCartasConectadas(Carta[] jogo) {
-        return isSequencia(jogo);
-    }
-
-    private boolean isQualquer2Cartas9OuMelhor(Carta[] jogo) {
-        return containsValores(jogo, new int[]{9, 10, 11, 12, 13, 14});
-    }
-
-    // Funções Auxiliares
-    private boolean containsValores(Carta[] jogo, int[] valoresDesejados) {
-        // Verifica se a mão contém os valores desejados
-        for (int valor : valoresDesejados) {
-            if (Arrays.stream(jogo).noneMatch(carta -> carta.valor == valor)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean hasSameValue(Carta[] jogo, int quantidade) {
-        // Verifica se existe um número de cartas com o mesmo valor
-        return Arrays.stream(jogo)
-                .collect(Collectors.groupingBy(carta -> carta.valor, Collectors.counting()))
-                .values().stream().anyMatch(count -> count == quantidade);
-    }
-
-    private int countPairs(Carta[] jogo) {
-        // Conta quantos pares existem na mão
-        return (int) Arrays.stream(jogo)
-                .collect(Collectors.groupingBy(carta -> carta.valor, Collectors.counting()))
-                .values().stream().filter(count -> count == 2).count();
-    }
-
-    // Verifica se a mão é "Não conectado nem adequado, pelo menos um 2-9"
-    private boolean isNaoConectadoNemAdequado(Carta[] jogo) {
-        // Verifica se nenhuma das cartas está conectada ou com o mesmo naipe e se todas as cartas têm valor entre 2 e 9
-        boolean naoConectado = !isSequencia(jogo);
-        boolean naoAdequado = !isFlush(jogo);
-        boolean entre2e9 = Arrays.stream(jogo).allMatch(carta -> carta.valor >= 2 && carta.valor <= 9);
-        return naoConectado && naoAdequado && entre2e9;
-    }
-
-    // Verifica se a mão tem "Desenho de sequência aberta"
-    private boolean isDesenhosSequenciaAberta(Carta[] jogo) {
-        int[] valores = Arrays.stream(jogo).mapToInt(carta -> carta.valor).sorted().toArray();
-        // Verifica se há quatro cartas em sequência e uma carta fora
-        for (int i = 0; i < valores.length - 3; i++) {
-            if (valores[i + 1] == valores[i] + 1 && valores[i + 2] == valores[i] + 2 && valores[i + 3] == valores[i] + 3) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // Verifica se a mão tem "Quatro para um flush"
-    private boolean isQuatroParaFlush(Carta[] jogo) {
-        // Verifica se há 4 cartas do mesmo naipe
-        return Arrays.stream(jogo)
-                .collect(Collectors.groupingBy(carta -> carta.naipe, Collectors.counting()))
-                .values().stream().anyMatch(count -> count == 4);
-    }
-
-    // Verifica se a mão tem "Sequência interna"
-    private boolean isSequenciaInterna(Carta[] jogo) {
-        int[] valores = Arrays.stream(jogo).mapToInt(carta -> carta.valor).sorted().toArray();
-        // Verifica se há uma sequência de quatro cartas com um buraco no meio (sequência interna)
-        for (int i = 0; i < valores.length - 3; i++) {
-            if (valores[i + 1] == valores[i] + 2 && valores[i + 2] == valores[i + 1] + 1) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // Verifica se a mão tem "Um par para dois pares ou trinca"
-    private boolean isUmParParaDoisParesOuTrinca(Carta[] jogo) {
-        // Verifica se há um par e se a mão tem potencial para evoluir para dois pares ou trinca
-        boolean umPar = isUmPar(jogo);
-        boolean doisParesOuTrinca = isDoisPares(jogo) || isTrinca(jogo);
-        return umPar && doisParesOuTrinca;
-    }
-
-    // Verifica se a mão tem "Overcards" (cartas mais altas que as do adversário)
-    private boolean isOvercards(Carta[] jogo) {
-        // Considera como overcards se todas as cartas têm valor maior que 10
-        return Arrays.stream(jogo).allMatch(carta -> carta.valor > 10);
-    }
-
-    // Verifica se a mão está "Comprando para um set" (tentando completar uma trinca)
-    private boolean isComprandoSet(Carta[] jogo) {
-        // Se há um par e outra carta que poderia completar a trinca
-        return isUmPar(jogo) && Arrays.stream(jogo).anyMatch(carta -> carta.valor != Arrays.stream(jogo).mapToInt(c -> c.valor).distinct().findFirst().orElse(0));
-    }
-
-    // Verifica se a mão tem "AA, KK, QQ, JJ, TT"
-    private boolean isAAKKQQJJTT(Carta[] jogo) {
-        // Verifica se a mão contém um par de AA, KK, QQ, JJ ou TT
-        return containsValores(jogo, new int[]{14, 13, 12, 11, 10}) && hasSameValue(jogo, 2);
-    }
-
-    // Verifica se a mão tem "Cartas conectadas, 10 ou melhor"
-    private boolean isCartasConectadas10OuMelhor(Carta[] jogo) {
-        // Verifica se todas as cartas têm valor de pelo menos 10
-        boolean todasCartasSao10OuMelhor = Arrays.stream(jogo).allMatch(carta -> carta.valor >= 10);
-
-        // Verifica se as cartas são conectadas (sequência)
-        boolean saoConectadas = isSequencia(jogo);
-
-        // Retorna true se as cartas forem conectadas e todas forem 10 ou melhores
-        return todasCartasSao10OuMelhor && saoConectadas;
     }
 
     // Inicializa as odds de cada tipo de mão de poker
@@ -370,100 +156,100 @@ public class AgenteProbabilistico implements Agente {
 
     // Metodo para identificar a mão do jogador e atribuir as odds
     private double definirOddsMao(Carta[] jogo) {
-        if (isRoyalFlush(jogo)) {
+        if (maoDePoker.isRoyalFlush(jogo)) {
             return oddsMap.get("Royal Flush");
         }
-        if (isStraightFlush(jogo)) {
+        if (maoDePoker.isStraightFlush(jogo)) {
             return oddsMap.get("Straight Flush");
         }
-        if (isQuadra(jogo)) {
+        if (maoDePoker.isQuadra(jogo)) {
             return oddsMap.get("Quadra");
         }
-        if (isFullHouse(jogo)) {
+        if (maoDePoker.isFullHouse(jogo)) {
             return oddsMap.get("Full House");
         }
-        if (isFlush(jogo)) {
+        if (maoDePoker.isFlush(jogo)) {
             return oddsMap.get("Flush");
         }
-        if (isSequencia(jogo)) {
+        if (maoDePoker.isSequencia(jogo)) {
             return oddsMap.get("Sequência");
         }
-        if (isTrinca(jogo)) {
+        if (maoDePoker.isTrinca(jogo)) {
             return oddsMap.get("Trinca");
         }
-        if (isDoisPares(jogo)) {
+        if (maoDePoker.isDoisPares(jogo)) {
             return oddsMap.get("Dois Pares");
         }
-        if (isUmPar(jogo)) {
+        if (maoDePoker.isUmPar(jogo)) {
             return oddsMap.get("Um Par");
         }
-        if (isAKSuited(jogo)) {
+        if (maoDePoker.isAKSuited(jogo)) {
             return oddsMap.get("AKs");
         }
-        if (isAA(jogo)) {
+        if (maoDePoker.isAA(jogo)) {
             return oddsMap.get("AA");
         }
-        if (isAKsKQsQJsJTs(jogo)) {
+        if (maoDePoker.isAKsKQsQJsJTs(jogo)) {
             return oddsMap.get("AKsKQsQJsJTs");
         }
-        if (isAK(jogo)) {
+        if (maoDePoker.isAK(jogo)) {
             return oddsMap.get("AK");
         }
-        if (isAAKKQQ(jogo)) {
+        if (maoDePoker.isAAKKQQ(jogo)) {
             return oddsMap.get("AAKKQQ");
         }
-        if (isAAKKQQJJ(jogo)) {
+        if (maoDePoker.isAAKKQQJJ(jogo)) {
             return oddsMap.get("AAKKQQJJ");
         }
-        if (isCartasMesmoNaipeValeteOuMelhor(jogo)) {
+        if (maoDePoker.isCartasMesmoNaipeValeteOuMelhor(jogo)) {
             return oddsMap.get("Cartas do mesmo naipe, valete ou melhor");
         }
-        if (isAAKKQQJJTT(jogo)) {
+        if (maoDePoker.isAAKKQQJJTT(jogo)) {
             return oddsMap.get("AAKKQQJJTT");
         }
-        if (isCartasMesmoNaipe10OuMelhor(jogo)) {
+        if (maoDePoker.isCartasMesmoNaipe10OuMelhor(jogo)) {
             return oddsMap.get("Cartas do mesmo naipe, 10 ou melhor");
         }
-        if (isConectoresMesmoNaipe(jogo)) {
+        if (maoDePoker.isConectoresMesmoNaipe(jogo)) {
             return oddsMap.get("Conectores do mesmo naipe");
         }
-        if (isCartasConectadas10OuMelhor(jogo)) {
+        if (maoDePoker.isCartasConectadas10OuMelhor(jogo)) {
             return oddsMap.get("Cartas conectadas, 10 ou melhor");
         }
-        if (isQualquer2CartasDamaOuMelhor(jogo)) {
+        if (maoDePoker.isQualquer2CartasDamaOuMelhor(jogo)) {
             return oddsMap.get("Qualquer 2 cartas com valor de pelo menos dama");
         }
-        if (isQualquer2CartasValeteOuMelhor(jogo)) {
+        if (maoDePoker.isQualquer2CartasValeteOuMelhor(jogo)) {
             return oddsMap.get("Qualquer 2 cartas com valor de pelo menos valete");
         }
-        if (isQualquer2Cartas10OuMelhor(jogo)) {
+        if (maoDePoker.isQualquer2Cartas10OuMelhor(jogo)) {
             return oddsMap.get("Qualquer 2 cartas com valor de pelo menos 10");
         }
-        if (isCartasConectadas(jogo)) {
+        if (maoDePoker.isCartasConectadas(jogo)) {
             return oddsMap.get("Cartas conectadas");
         }
-        if (isQualquer2Cartas9OuMelhor(jogo)) {
+        if (maoDePoker.isQualquer2Cartas9OuMelhor(jogo)) {
             return oddsMap.get("Qualquer 2 cartas com valor de pelo menos 9");
         }
-        if (isNaoConectadoNemAdequado(jogo)) {
+        if (maoDePoker.isNaoConectadoNemAdequado(jogo)) {
             return oddsMap.get("Não conectado nem adequado, pelo menos um 2-9");
         }
-        if (isDesenhosSequenciaAberta(jogo)) {
+        if (maoDePoker.isDesenhosSequenciaAberta(jogo)) {
             return oddsMap.get("Desenhos de sequência aberta");
         }
-        if (isQuatroParaFlush(jogo)) {
+        if (maoDePoker.isQuatroParaFlush(jogo)) {
             return oddsMap.get("Quatro para um flush");
         }
-        if (isSequenciaInterna(jogo)) {
+        if (maoDePoker.isSequenciaInterna(jogo)) {
             return oddsMap.get("Sequência interna");
         }
-        if (isUmParParaDoisParesOuTrinca(jogo)) {
+        if (maoDePoker.isUmParParaDoisParesOuTrinca(jogo)) {
             return oddsMap.get("Um par para dois pares ou trinca");
         }
-        if (isOvercards(jogo)) {
+        if (maoDePoker.isOvercards(jogo)) {
             return oddsMap.get("Overcards");
         }
-        if (isComprandoSet(jogo)) {
+        if (maoDePoker.isComprandoSet(jogo)) {
             return oddsMap.get("Comprando para um set");
         }
 
