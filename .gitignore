@@ -1,0 +1,12 @@
+.idea
+.project
+.classpath
+.settings
+.vscode
+*/.DS_Store
+*/.idea
+*/.project
+*/.classpath
+*/.settings
+*/out
+*/*.iml
